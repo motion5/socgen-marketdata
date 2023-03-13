@@ -1,23 +1,40 @@
-using MarketData.ContributionGatewayApi.Models;
+using MarketData.ContributionGatewayApi;
+using MarketData.ContributionGatewayApi.Infrastructure;
+using SurrealDb.Client;
 
 var builder = WebApplication.CreateBuilder( args );
+
+builder.Services.AddEndpointsApiExplorer( );
+builder.Services.AddSwaggerGen( );
+builder.Services.AddHttpClient( );
+builder.Services.AddJsonConverters( );
+builder.Services.AddSurrealClient( );
+
 var app = builder.Build( );
 
-app.MapGet( "/",
-            ( ) => "Hello World!" );
-
 app.MapPost( "/contribution",
-             ( ContributionRequest request ) =>
+             async ( ContributionRequest request,
+                     ISurrealDbClient dbClient,
+                     CancellationToken cancellationToken ) =>
              {
-                 var response = new ContributionResponse(
-                                                         Guid.NewGuid( ),
-                                                         request.MarketDataType,
-                                                         request.MarketData,
-                                                         "Validated",
-                                                         DateTime.UtcNow );
+                 try
+                 {
+                     var domainModel = request.ToDomainModel( );
+                     // save to database
+                     var result = await dbClient.CreateRecord( domainModel,
+                                                               cancellationToken );
 
-                 return Results.Created( $"/contribution/{response.Id}",
-                                         response );
+                     var createdRecord = result.SerialiseResult.First( )
+                                               .Result.First( );
+
+                     return Results.Created( $"contribution/{createdRecord.Id}",
+                                             createdRecord );
+                 }
+                 catch ( Exception e ) when ( e is ArgumentNullException ||
+                                              e is ArgumentException )
+                 {
+                     return Results.BadRequest( e.Message );
+                 }
              } );
 
 app.Run( );
