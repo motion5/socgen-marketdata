@@ -1,4 +1,4 @@
-namespace MarketData.ContributionGatewayApi.Models;
+namespace MarketData.ContributionGatewayApi.Infrastructure;
 
 /**
      * Returns 

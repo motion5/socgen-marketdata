@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-#
+# 
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B6AAF37A-9B6C-4DA4-9BEA-538E6519ECA5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketData.ContributionGatewayApi", "src\MarketData.ContributionGatewayApi\MarketData.ContributionGatewayApi.csproj", "{0326CDCB-17C1-45BA-831C-805C5CF652BE}"
@@ -10,6 +10,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketData.ContributionGatewayApi.Tests", "test\MarketData.ContributionGatewayApi.Tests\MarketData.ContributionGatewayApi.Tests.csproj", "{D0048FBB-59F1-4BBD-A7F9-8D18326C6A5A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "libs", "libs", "{6D523B0A-4331-4C3F-8CBE-38CA0FCB3E3F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "surrealdb-client", "surrealdb-client", "{1A1D8B5D-C3D9-4AE9-87AB-1393828A296C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{3023D47B-29BE-48B5-ADD0-E774E21A4D9E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurrealDb.Client", "libs\surrealdb-client\src\SurrealDb.Client\SurrealDb.Client.csproj", "{EB5C53EA-AC5C-494A-8861-752195CF7056}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,9 +35,16 @@ Global
 		{D0048FBB-59F1-4BBD-A7F9-8D18326C6A5A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D0048FBB-59F1-4BBD-A7F9-8D18326C6A5A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D0048FBB-59F1-4BBD-A7F9-8D18326C6A5A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB5C53EA-AC5C-494A-8861-752195CF7056}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB5C53EA-AC5C-494A-8861-752195CF7056}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB5C53EA-AC5C-494A-8861-752195CF7056}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB5C53EA-AC5C-494A-8861-752195CF7056}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{0326CDCB-17C1-45BA-831C-805C5CF652BE} = {B6AAF37A-9B6C-4DA4-9BEA-538E6519ECA5}
 		{D0048FBB-59F1-4BBD-A7F9-8D18326C6A5A} = {9C9B7810-2E64-4E7E-94D4-063D62CDA16B}
+		{1A1D8B5D-C3D9-4AE9-87AB-1393828A296C} = {6D523B0A-4331-4C3F-8CBE-38CA0FCB3E3F}
+		{3023D47B-29BE-48B5-ADD0-E774E21A4D9E} = {1A1D8B5D-C3D9-4AE9-87AB-1393828A296C}
+		{EB5C53EA-AC5C-494A-8861-752195CF7056} = {3023D47B-29BE-48B5-ADD0-E774E21A4D9E}
 	EndGlobalSection
 EndGlobal

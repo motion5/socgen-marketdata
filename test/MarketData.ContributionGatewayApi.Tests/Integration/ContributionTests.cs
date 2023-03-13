@@ -1,8 +1,16 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentAssertions;
+using MarketData.ContributionGatewayApi.Domain;
+using MarketData.ContributionGatewayApi.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using NSubstitute;
+using SurrealDb.Client;
+using SurrealDb.Client.SurrealResponses;
 using Xunit;
 
 namespace MarketData.ContributionGatewayApi.Tests.Integration;
@@ -11,34 +19,76 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> factory;
     private const string BaseRoute = "contribution";
+    private readonly ISurrealDbClient surrealDbClient = Substitute.For<ISurrealDbClient>( );
+
+    private readonly JsonSerializerOptions
+        jsonSerializerOptions = new( )
+                                {
+                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                    Converters =
+                                    {
+                                        new JsonStringEnumConverter( JsonNamingPolicy.CamelCase )
+                                    }
+                                };
 
     public ContributionTests( )
     {
-        this.factory = new WebApplicationFactory<Program>( ).WithWebHostBuilder( builder =>
-                                                                                 {
-                                                                                     builder
-                                                                                        .UseEnvironment( "Development" );
-                                                                                 } );
+        this.factory =
+            new WebApplicationFactory<Program>( )
+               .WithWebHostBuilder(
+                                   builder =>
+                                   {
+                                       builder
+                                          .UseEnvironment( "Development" );
+                                       builder
+                                          .ConfigureServices( services
+                                                                  =>
+                                                              {
+                                                                  services.AddJsonConverters( );
+                                                                  services
+                                                                     .AddTransient
+                                                                          <ISurrealDbClient>( _ => this
+                                                                                                 .surrealDbClient );
+                                                              } );
+                                   } );
     }
 
     [Fact]
     public async Task CreateMarketDataContribution_CreatesAContribution_WhenDataIsValid( )
     {
         // Arrange
-        var client = this.factory.CreateClient( );
-        var contributionRequest = GenerateContributionRequest( );
+        var sut = this.factory.CreateClient( );
+        var contributionRequest = GenerateContributionRequest( "FxQuote",
+                                                               "EUR/USD",
+                                                               1.2345m,
+                                                               1.2346m );
+        this.surrealDbClient.CreateRecord( Arg.Any<MarketDataContribution>( ),
+                                           Arg.Any<CancellationToken>( ) )
+            .Returns( Task.FromResult( GenerateCreateMarketDataContributionResponse( "FxQuote",
+                                                                                     "EUR/USD",
+                                                                                     1.2345m,
+                                                                                     1.2346m
+                                                                                   )
+                                     )
+                    );
 
         // Act
-        var response = await client.PostAsJsonAsync( BaseRoute,
-                                                     contributionRequest );
-        var createdContribution = await response.Content.ReadFromJsonAsync<ContributionResponse>( );
+        var response = await sut.PostAsJsonAsync( BaseRoute,
+                                                  contributionRequest );
 
         // Assert
+        response.EnsureSuccessStatusCode( );
+
+        var createdContribution =
+            await response.Content
+                          .ReadFromJsonAsync<MarketDataContribution>( jsonSerializerOptions );
+
         response.StatusCode.Should( )
                 .Be( HttpStatusCode.Created );
         createdContribution!.Id.Should( )
-                            .NotBe( Guid.Empty );
-        createdContribution.MarketDataType.Should( )
+                            .NotBeEmpty( );
+        createdContribution.MarketDataType.ToString( )
+                           .Should( )
                            .Be( contributionRequest.MarketDataType );
         createdContribution.MarketData.Should( )
                            .BeEquivalentTo( contributionRequest.MarketData );
@@ -48,52 +98,83 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                                      0,
                                                      0,
                                                      1 ) );
+
+        response.Headers.Location.Should( )
+                .Be( $"{BaseRoute}/{createdContribution.Id}" );
     }
 
-    private ContributionRequest GenerateContributionRequest( )
+    [Fact]
+    public async Task CreateMarketDataContribution_ReturnsBadRequest_WhenDataIsInvalid( )
     {
-        return new("FxQuote",
-                   new("EUR/USD",
-                       1.1234m,
-                       1.1236m)
-                  );
+        // Arrange
+        var sut = this.factory.CreateClient( );
+        var contributionRequest = GenerateContributionRequest( "InvalidType",
+                                                               "EUR/USD",
+                                                               1.2345m,
+                                                               1.2346m );
+
+        this.surrealDbClient.CreateRecord( Arg.Any<MarketDataContribution>( ),
+                                           Arg.Any<CancellationToken>( ) )
+            .Returns( Task.FromResult( new ApiResponse<MarketDataContribution>( ) ) );
+
+        // Act
+        var response = await sut.PostAsJsonAsync( BaseRoute,
+                                                  contributionRequest );
+
+        // Assert
+        response.StatusCode.Should( )
+                .Be( HttpStatusCode.BadRequest );
     }
 
-    /**
-     * POST /api/contribution
-{
-    "marketDataType": "FxQuote",
-    "marketData": {
-        "currencyPair": "EUR/USD",
-        "bid": 1.1234,
-        "ask": 1.1236
+    private ContributionRequest GenerateContributionRequest( string marketDataType,
+                                                             string currencyPair,
+                                                             decimal bid,
+                                                             decimal ask )
+    {
+        return new ContributionRequest( marketDataType,
+                                        new Infrastructure.MarketData( currencyPair,
+                                                                       bid,
+                                                                       ask )
+                                      );
     }
-}
-     */
+
     public record ContributionRequest( string MarketDataType,
-                                       MarketData MarketData );
+                                       Infrastructure.MarketData MarketData );
 
-    public record MarketData( string CurrencyPair,
-                              decimal Bid,
-                              decimal Ask );
+    private ApiResponse<MarketDataContribution> GenerateCreateMarketDataContributionResponse(
+        string marketDataType,
+        string currencyPair,
+        decimal bid,
+        decimal ask )
+    {
+        var marketDataContribution =
+            MarketDataContribution.Create( marketDataType,
+                                           new Infrastructure.MarketData( currencyPair,
+                                                                          bid,
+                                                                          ask )
+                                         );
 
-    /**
-     * Returns 
-{
-    "id": "123",
-    "marketDataType": "FxQuote",
-    "marketData": {
-        "currencyPair": "EUR/USD",
-        "bid": 1.1234,
-        "ask": 1.1236
-    },
-    "status": "Validated"
-    "createdDate": "2020-01-01T00:00:00Z"
-}
-     */
-    public record ContributionResponse( Guid Id,
-                                        string MarketDataType,
-                                        MarketData MarketData,
-                                        string Status,
-                                        DateTime CreatedDate );
+        marketDataContribution.Id = Guid.NewGuid( )
+                                        .ToString( );
+
+        return GenerateSurrealCreatedApiResponse( marketDataContribution );
+    }
+
+    private ApiResponse<T> GenerateSurrealCreatedApiResponse<T>( T createdRecord )
+    {
+        var listOfMarketDataContributions =
+            new List<T> { createdRecord };
+        var queryResponses = new List<QueryResponse<T>>
+                             {
+                                 new(listOfMarketDataContributions,
+                                     "",
+                                     StatusResult.OK)
+                             };
+
+        var record =
+            new ApiResponse<T>( HttpStatusCode.Created )
+               .SetQueryResponse( queryResponses );
+
+        return record;
+    }
 }
