@@ -22,15 +22,12 @@ public class ContributionService : IContributionService
         var result = await this.SurrealDbClient.CreateRecord( domainModel,
                                                               cancellationToken );
         
-        var databaseStatus = result.SerialiseResult?.First( )
-                                  .Status;
-
-        if ( databaseStatus is StatusResult.ERR )
+        if ( !string.IsNullOrWhiteSpace( result.Error) )
         {
             return new 
                 DatabaseError( "Database returned error status code" );
         }
-
+        
         var createdRecord = result.SerialiseResult?.First( )
                                   .Result.First( );
 

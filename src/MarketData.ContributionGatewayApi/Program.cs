@@ -19,22 +19,26 @@ app.MapPost( "/contribution",
                      IContributionService service,
                      CancellationToken cancellationToken ) =>
              {
-                 try
-                 {
-                     var domainModel = request.ToMarketDataContribution( );
+                 return await request.ToMarketDataContribution( )
+                                     .ToAsync( )
+                                     .Map( async marketDataContribution =>
+                                           {
+                                               var created =
+                                                   await service
+                                                      .CreateContribution( marketDataContribution,
+                                                                           cancellationToken );
 
-                     var created = await service.CreateContribution( domainModel,
-                                                                     cancellationToken );
-
-                     return created.Match( record => Results.Created( $"contribution/{record.Id}",
-                                                                      record ),
-                                           Results.BadRequest,
-                                           dbError => Results.Problem( dbError.Error ) );
-                 }
-                 catch ( Exception e ) when ( e is ArgumentException or ArgumentNullException )
-                 {
-                     return Results.BadRequest( e.Message );
-                 }
+                                               return created.Match( record
+                                                                         => Results
+                                                                            .Created( $"contribution/{record.Id}",
+                                                                                      record ),
+                                                                     Results.BadRequest,
+                                                                     dbError
+                                                                         => Results
+                                                                            .Problem( "Unable to connect to Db" ) );
+                                           } )
+                                     .Match( result => result.Result,
+                                             Results.BadRequest );
              } );
 
 app.Run( );

@@ -89,8 +89,8 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
         createdContribution.MarketDataType.ToString( )
                            .Should( )
                            .Be( contributionRequest.MarketDataType );
-        createdContribution.TickData.Should( )
-                           .BeEquivalentTo( contributionRequest.TickData );
+        createdContribution.MarketData.Should( )
+                           .BeEquivalentTo( contributionRequest.MarketData );
         createdContribution.CreatedDate.Should( )
                            .BeCloseTo( DateTime.UtcNow,
                                        new TimeSpan( 0,
@@ -123,22 +123,29 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         response.StatusCode.Should( )
                 .Be( HttpStatusCode.BadRequest );
+        
+        
+        
+        var responseBody = await response.Content.ReadFromJsonAsync<ValidationError>( );
+        
+        responseBody.Errors.Should( )
+                    .Contain( "marketDataType is not a valid market data type" ); 
     }
 
     public ContributionRequest GenerateContributionRequest( string marketDataType,
-                                                             string currencyPair,
-                                                             decimal bid,
-                                                             decimal ask )
+                                                            string currencyPair,
+                                                            decimal bid,
+                                                            decimal ask )
     {
         return new ContributionRequest( marketDataType,
-                                        new Infrastructure.TickData( currencyPair,
-                                                                       bid,
-                                                                       ask )
+                                        new Infrastructure.MarketDataValue( currencyPair,
+                                                                            bid,
+                                                                            ask )
                                       );
     }
 
     public record ContributionRequest( string MarketDataType,
-                                       Infrastructure.TickData TickData );
+                                       Infrastructure.MarketDataValue MarketData );
 
 
     public static ApiResponse<MarketDataContribution> GenerateCreateMarketDataContributionResponse(
@@ -147,12 +154,16 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
         decimal bid,
         decimal ask )
     {
-        var marketDataContribution =
+        var result =
             MarketDataContribution.Create( marketDataType,
-                                           new Infrastructure.TickData( currencyPair,
-                                                                          bid,
-                                                                          ask )
+                                           new Infrastructure.MarketDataValue( currencyPair,
+                                                                               bid,
+                                                                               ask )
                                          );
+
+        var marketDataContribution = result.Match( val => val,
+                                                   err => throw new Exception( err.Errors
+                                                                                  .First( ) ) );
 
         marketDataContribution.Id = Guid.NewGuid( )
                                         .ToString( );
@@ -177,5 +188,4 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
 
         return record;
     }
-
 }

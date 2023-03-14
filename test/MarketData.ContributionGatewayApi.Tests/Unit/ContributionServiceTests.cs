@@ -27,11 +27,15 @@ public class ContributionServiceTests
 
         var sut = new ContributionService( this.surrealDbClient );
 
+        var contributionRequest = MarketDataContribution.Create( "FxQuote",
+                                                                 new
+                                                                     MarketDataValue( "EUR/USD",
+                                                                                      1.2345m,
+                                                                                      1.2346m ) )
+                                                        .GetRight( );
+
         // Act
-        await sut.CreateContribution( MarketDataContribution.Create( "FxQuote",
-                                                                     new TickData( "EUR/USD",
-                                                                                   1.2345m,
-                                                                                   1.2346m ) ),
+        await sut.CreateContribution( contributionRequest,
                                       CancellationToken.None );
 
         // Assert
@@ -53,13 +57,15 @@ public class ContributionServiceTests
                                                                                      1.2346m ) ) );
 
         var sut = new ContributionService( this.surrealDbClient );
+        var marketDataRequest = MarketDataContribution.Create( "FxQuote",
+                                                               new
+                                                                   MarketDataValue( "EUR/USD",
+                                                                                    1.2345m,
+                                                                                    1.2346m ) )
+                                                      .GetRight( );
 
         // Act
-        var result = await sut.CreateContribution( MarketDataContribution.Create( "FxQuote",
-                                                                                  new
-                                                                                      TickData( "EUR/USD",
-                                                                                                1.2345m,
-                                                                                                1.2346m ) ),
+        var result = await sut.CreateContribution( marketDataRequest,
                                                    CancellationToken.None );
 
         // Assert
@@ -68,11 +74,11 @@ public class ContributionServiceTests
                                                   record.MarketDataType.ToString( )
                                                         .Should( )
                                                         .Be( "FxQuote" );
-                                                  record.TickData.CurrencyPair.Should( )
+                                                  record.MarketData.CurrencyPair.Should( )
                                                         .Be( "EUR/USD" );
-                                                  record.TickData.Bid.Should( )
+                                                  record.MarketData.Bid.Should( )
                                                         .Be( 1.2345m );
-                                                  record.TickData.Ask.Should( )
+                                                  record.MarketData.Ask.Should( )
                                                         .Be( 1.2346m );
                                                   return null!;
                                               },
@@ -94,21 +100,24 @@ public class ContributionServiceTests
         this.surrealDbClient.CreateRecord( Arg.Any<MarketDataContribution>( ),
                                            Arg.Any<CancellationToken>( ) )
             .Returns( Task.FromResult( GenerateErroredSurrealApiResponse( MarketDataContribution
-                                                                             .Create( "FxQuote",
-                                                                                      new
-                                                                                          TickData( "EUR/USD",
-                                                                                                    1.2345m,
-                                                                                                    1.2346m )
-                                                                                    ) ) ) );
+                                                                         .Create( "FxQuote",
+                                                                                  new
+                                                                                      MarketDataValue( "EUR/USD",
+                                                                                                       1.2345m,
+                                                                                                       1.2346m )
+                                                                                )
+                                                                         .GetRight( ) ) ) );
 
         var sut = new ContributionService( this.surrealDbClient );
+        var marketDataContribution = MarketDataContribution.Create( "FxQuote",
+                                                     new
+                                                         MarketDataValue( "EUR/USD",
+                                                                          1.2345m,
+                                                                          1.2346m ) )
+                                            .GetRight( );
 
         // Act
-        var result = await sut.CreateContribution( MarketDataContribution.Create( "FxQuote",
-                                                                                  new
-                                                                                      TickData( "EUR/USD",
-                                                                                                1.2345m,
-                                                                                                1.2346m ) ),
+        var result = await sut.CreateContribution( marketDataContribution,
                                                    CancellationToken.None );
 
         // Assert
@@ -132,10 +141,10 @@ public class ContributionServiceTests
     {
         var marketDataContribution =
             MarketDataContribution.Create( marketDataType,
-                                           new TickData( currencyPair,
-                                                         bid,
-                                                         ask )
-                                         );
+                                           new MarketDataValue( currencyPair,
+                                                                bid,
+                                                                ask )
+                                         ).GetRight();
 
         marketDataContribution.Id = Guid.NewGuid( )
                                         .ToString( );
@@ -172,6 +181,7 @@ public class ContributionServiceTests
 
         var record =
             new ApiResponse<T>( HttpStatusCode.InternalServerError )
+               .HasErrored("Unable to connect to DB", new InvalidOperationException("Unable to connect to localhost:8999"))
                .SetQueryResponse( queryResponses );
 
         return record;

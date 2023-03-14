@@ -1,53 +1,65 @@
+using LanguageExt;
+
 namespace MarketData.ContributionGatewayApi.Domain;
 
 public class MarketDataContribution
 {
     public MarketDataContribution(
         MarketDataType marketDataType,
-        Infrastructure.TickData tickData,
+        Infrastructure.MarketDataValue marketData,
         MarketDataContributionStatus status,
         DateTime createdDate )
     {
         this.MarketDataType = marketDataType;
-        this.TickData = tickData;
+        this.MarketData = marketData;
         this.Status = status;
         this.CreatedDate = createdDate;
     }
 
     public string? Id { get; set; }
     public MarketDataType MarketDataType { get; }
-    public Infrastructure.TickData TickData { get; }
+    public Infrastructure.MarketDataValue MarketData { get; }
     public MarketDataContributionStatus Status { get; }
     public DateTime CreatedDate { get; }
 
-    public static MarketDataContribution Create(
+    public static Either<ValidationError, MarketDataContribution> Create(
         string marketDataType,
-        Infrastructure.TickData tickData )
+        Infrastructure.MarketDataValue marketData )
     {
+        var validationErrors = new List<string>( );
+
         // validate
         if ( string.IsNullOrWhiteSpace( marketDataType ) )
         {
-            throw new ArgumentNullException( $"{nameof(marketDataType)} cannot be null or empty" );
+            validationErrors.Add( $"{nameof( marketDataType )} cannot be null or empty" );
         }
-        if ( string.IsNullOrWhiteSpace( tickData.CurrencyPair ) )
+
+        if ( string.IsNullOrWhiteSpace( marketData.CurrencyPair ) )
         {
-            throw new ArgumentNullException( $"{nameof(marketDataType)} cannot be null or empty" );
+            validationErrors.Add( $"{nameof( marketData.CurrencyPair )} cannot be null or empty" );
         }
 
         if ( !Enum.IsDefined( typeof( MarketDataType ),
                               marketDataType ) )
         {
-            throw new ArgumentException( "Invalid market data type" );
+            validationErrors.Add( $"{nameof( marketDataType )} is not a valid market data type" );
+        }
+
+        if ( validationErrors.Any( ) )
+        {
+            return Either<ValidationError, MarketDataContribution>
+               .Left( new ValidationError( validationErrors ) );
         }
 
         // parse
         var market = (MarketDataType)Enum.Parse( typeof( MarketDataType ),
                                                  marketDataType );
 
-        return new(market,
-                   tickData,
-                   MarketDataContributionStatus.NotValidated,
-                   DateTime.UtcNow);
+        return Either<ValidationError, MarketDataContribution>
+           .Right( new(market,
+                       marketData,
+                       MarketDataContributionStatus.NotValidated,
+                       DateTime.UtcNow) );
     }
 }
 

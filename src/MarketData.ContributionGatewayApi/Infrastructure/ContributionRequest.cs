@@ -1,20 +1,18 @@
+using LanguageExt;
 using MarketData.ContributionGatewayApi.Domain;
-using OneOf;
 
 namespace MarketData.ContributionGatewayApi.Infrastructure;
 
 public record ContributionRequest( string MarketDataType,
-                                   TickData TickData )
+                                   MarketDataValue MarketData )
 {
-    public string Id { get; set; } 
-    
-    public MarketDataContribution ToMarketDataContribution( )
-    {
-        return MarketDataContribution.Create( MarketDataType, this.TickData );
-    }
+    public string Id { get; set; }
+
+    public Either<ValidationError, MarketDataContribution> ToMarketDataContribution( )
+        => MarketDataContribution.Create( MarketDataType,
+                                          MarketData );
 };
 
-public record TickData( string CurrencyPair,
-                          decimal Bid,
-                          decimal Ask );
-
+public record MarketDataValue( string CurrencyPair,
+                               decimal Bid,
+                               decimal Ask );
