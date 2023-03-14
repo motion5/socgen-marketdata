@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using MarketData.ContributionGatewayApi.Domain;
-using MarketData.ContributionGatewayApi.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -90,8 +89,8 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
         createdContribution.MarketDataType.ToString( )
                            .Should( )
                            .Be( contributionRequest.MarketDataType );
-        createdContribution.MarketData.Should( )
-                           .BeEquivalentTo( contributionRequest.MarketData );
+        createdContribution.TickData.Should( )
+                           .BeEquivalentTo( contributionRequest.TickData );
         createdContribution.CreatedDate.Should( )
                            .BeCloseTo( DateTime.UtcNow,
                                        new TimeSpan( 0,
@@ -126,22 +125,23 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                 .Be( HttpStatusCode.BadRequest );
     }
 
-    private ContributionRequest GenerateContributionRequest( string marketDataType,
+    public ContributionRequest GenerateContributionRequest( string marketDataType,
                                                              string currencyPair,
                                                              decimal bid,
                                                              decimal ask )
     {
         return new ContributionRequest( marketDataType,
-                                        new Infrastructure.MarketData( currencyPair,
+                                        new Infrastructure.TickData( currencyPair,
                                                                        bid,
                                                                        ask )
                                       );
     }
 
     public record ContributionRequest( string MarketDataType,
-                                       Infrastructure.MarketData MarketData );
+                                       Infrastructure.TickData TickData );
 
-    private ApiResponse<MarketDataContribution> GenerateCreateMarketDataContributionResponse(
+
+    public static ApiResponse<MarketDataContribution> GenerateCreateMarketDataContributionResponse(
         string marketDataType,
         string currencyPair,
         decimal bid,
@@ -149,7 +149,7 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
     {
         var marketDataContribution =
             MarketDataContribution.Create( marketDataType,
-                                           new Infrastructure.MarketData( currencyPair,
+                                           new Infrastructure.TickData( currencyPair,
                                                                           bid,
                                                                           ask )
                                          );
@@ -160,7 +160,7 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
         return GenerateSurrealCreatedApiResponse( marketDataContribution );
     }
 
-    private ApiResponse<T> GenerateSurrealCreatedApiResponse<T>( T createdRecord )
+    public static ApiResponse<T> GenerateSurrealCreatedApiResponse<T>( T createdRecord )
     {
         var listOfMarketDataContributions =
             new List<T> { createdRecord };
@@ -177,4 +177,5 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
 
         return record;
     }
+
 }

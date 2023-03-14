@@ -25,9 +25,9 @@ public class MarketDataContributionConverter : JsonConverter<MarketDataContribut
                             value.Id );
         writer.WriteString( nameof( value.MarketDataType ),
                             value.MarketDataType.ToString( ) );
-        writer.WritePropertyName( nameof( value.MarketData ) );
+        writer.WritePropertyName( nameof( value.TickData ) );
         JsonSerializer.Serialize( writer,
-                                  value.MarketData,
+                                  value.TickData,
                                   options );
         writer.WriteString( nameof( value.Status ),
                             value.Status.ToString( ) );

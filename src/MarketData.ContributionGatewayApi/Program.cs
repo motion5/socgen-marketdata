@@ -1,4 +1,5 @@
 using MarketData.ContributionGatewayApi;
+using MarketData.ContributionGatewayApi.Application;
 using MarketData.ContributionGatewayApi.Infrastructure;
 using SurrealDb.Client;
 
@@ -9,29 +10,28 @@ builder.Services.AddSwaggerGen( );
 builder.Services.AddHttpClient( );
 builder.Services.AddJsonConverters( );
 builder.Services.AddSurrealClient( );
+builder.Services.AddTransient<IContributionService, ContributionService>( );
 
 var app = builder.Build( );
 
 app.MapPost( "/contribution",
              async ( ContributionRequest request,
-                     ISurrealDbClient dbClient,
+                     IContributionService service,
                      CancellationToken cancellationToken ) =>
              {
                  try
                  {
-                     var domainModel = request.ToDomainModel( );
-                     // save to database
-                     var result = await dbClient.CreateRecord( domainModel,
-                                                               cancellationToken );
+                     var domainModel = request.ToMarketDataContribution( );
 
-                     var createdRecord = result.SerialiseResult.First( )
-                                               .Result.First( );
+                     var created = await service.CreateContribution( domainModel,
+                                                                     cancellationToken );
 
-                     return Results.Created( $"contribution/{createdRecord.Id}",
-                                             createdRecord );
+                     return created.Match( record => Results.Created( $"contribution/{record.Id}",
+                                                                      record ),
+                                           Results.BadRequest,
+                                           dbError => Results.Problem( dbError.Error ) );
                  }
-                 catch ( Exception e ) when ( e is ArgumentNullException ||
-                                              e is ArgumentException )
+                 catch ( Exception e ) when ( e is ArgumentException or ArgumentNullException )
                  {
                      return Results.BadRequest( e.Message );
                  }
