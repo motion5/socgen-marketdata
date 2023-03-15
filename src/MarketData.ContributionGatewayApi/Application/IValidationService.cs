@@ -5,7 +5,6 @@ namespace MarketData.ContributionGatewayApi.Application;
 
 public interface IValidationService
 {
-    public Task<Either<ValidationServiceFail, ValidationServiceSuccess>> Validate(
-        MarketDataContribution contribution,
-        CancellationToken cancellationToken );
+    public Task<Either<ApplicationError, ValidationServiceSuccess>> Validate(MarketDataContribution contribution,
+        CancellationToken cancellationToken);
 }

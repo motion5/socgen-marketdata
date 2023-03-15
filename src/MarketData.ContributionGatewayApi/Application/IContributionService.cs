@@ -1,10 +1,11 @@
+using LanguageExt;
 using MarketData.ContributionGatewayApi.Domain;
 
 namespace MarketData.ContributionGatewayApi.Application;
 
 public interface IContributionService
 {
-    Task<CreateContributionResult> CreateContribution(
+    Task<Either<ApplicationError, MarketDataContribution>> CreateContribution(
         MarketDataContribution contribution,
         CancellationToken cancellationToken );
         

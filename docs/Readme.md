@@ -87,7 +87,8 @@ That said I certainly can produce quality code whatever the paradigm and adapt t
 I would be intrigued on your perspectives on this.
 
 ### Adding invalid contributions to the database
-It could be interpreted that the task is suggesting we don't add contributions to the database unless they are valid
+It could be interpreted that the task is suggesting we don't add contributions to the database unless they are valid.
+In practice the business user of the system might want to see all contributions, even if they are invalid for various reasons, for example they may not know they are getting items invalidated, maybe it's a upstream service, or the task is automated etc...
 
 ### If I were going further with this I would consider the following:
 - Better model errors in domain, and refactor into `Either<Error, Success>` pattern
