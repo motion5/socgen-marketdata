@@ -13,6 +13,19 @@ Markdown files to document the contribution service
 ### [Validation Service](./ValidationService.md)
 Markdown files to document the validation service
 
+## How to run
+### Prerequisites
+- Docker
+- .NET Core 7.0 SDK
+- Running Surreal Db instance, configured within the appsettings.Development.json - A docker container for this can be started using the Powershell script located at `/libs/surrealdb-client/run-surrealdb.ps1`
+
+### Running the tests
+I have included both unit tests and integration tests.
+
+Running the integration tests utilises TestContainers to spin up a docker container for the SurrealDb database.
+
+Hence keep in mind you need docker running for the integration tests to pass.
+
 ## Approach
 
 ### 1. Assumptions & Design & BDD
@@ -30,6 +43,9 @@ Once I had a basic creation pattern created I refactored the code into a service
 
 I then added in a mock for the Validation Service, and wrote a test to ensure that the Validation Service was called.
 
+#### 2.a Integration testing
+Mocking at the boundaries of the system is a good way to ensure that the system is decoupled and can be tested in isolation.
+This is why I've used integration tests and TestContainers 
 
 ## Code style, patterns, and practices
 I have chosen to showcase my skills in the following areas:
@@ -44,11 +60,27 @@ I opted for using the OneOf library so I could leverage Discriminated Unions and
 - Better model the domain ideas of the solution
 
 A nice bonus of these decisions is that my method signatures fully describe the possible responses of my methods, bar exceptional cases. 
-There are no hidden user exceptions ( .NET SDK still heavily relies on exceptions ), so these can still throw, as they should.
+There are no hidden user exceptions ( .NET SDK still heavily relies on exceptions ), so these can still throw in exceptional circumstances, as they should.
 
 I hope that this solution showcases my understanding of both OOP and functional paradigms.
-I believe that functional programming is a good way to reduce bugs and improve code quality.
 
+## Points to note
+
+### Use of non-idiomatic code
+The functional paradigms used are not idiomatic to C# and .NET, but I believe that the benefits out weight the learning curve,
+
+I believe that functional programming is a good way to reduce bugs and improve code quality which is why I included it. 
+
+That said I certainly can produce quality code whatever the paradigm and adapt to the preferences of the team. 
+I would be intrigued on your perspectives on this.
+
+### Adding invalid contributions to the database
+It could be interpreted that the task is suggesting we don't add contributions to the database unless they are valid
+
+### If I were going further with this I would consider the following:
+- Better model errors in domain, and refactor into `Either<Error, Success>` pattern
+- Remove public constructors for my domain model, this was done for brevity, however in a full solution I would control creation of those entities better and implement custom Json converters to ensure that the domain model is not instantiated incorrectly.
+I also wouldn't want my domain model to know about my infrastructure layer, currently it is using a record from the infrastructure, in practice we could use a value object for the `MarketDataValue` type
 
 ## Solution
 

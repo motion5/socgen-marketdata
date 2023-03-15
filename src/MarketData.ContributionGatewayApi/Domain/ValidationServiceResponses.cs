@@ -18,8 +18,8 @@ public class ValidationServiceFail
 
 public enum ValidationFailureType
 {
-    InvalidFormat = 0012033,
-    MIFID2Fail = 0012034
+    InvalidFormat, 
+    MIFID2Fail,
 }
 
 public class ValidationServiceSuccess { }

@@ -68,16 +68,3 @@ public class MarketDataContribution
                        DateTime.UtcNow) );
     }
 }
-
-public enum MarketDataContributionStatus
-{
-    NotValidated,
-    FailedValidation,
-    Validated,
-}
-
-public enum MarketDataType
-{
-    FxQuote,
-    Future,
-}

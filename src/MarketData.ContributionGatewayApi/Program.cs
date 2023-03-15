@@ -15,6 +15,9 @@ builder.Services.AddTransient<IValidationService, MockValidationService>( );
 
 var app = builder.Build( );
 
+app.UseSwagger( );
+app.UseSwaggerUI( );
+
 app.MapGet( "/contribution",
             async ( IContributionService service,
               CancellationToken cancellationToken ) =>

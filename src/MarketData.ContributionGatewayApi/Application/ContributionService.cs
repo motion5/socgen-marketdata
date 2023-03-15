@@ -31,6 +31,11 @@ public class ContributionService : IContributionService
 
         var createdRecord = result.SerialiseResult?.First( )
                                   .Result.First( );
+        
+        if ( createdRecord is null )
+        {
+            return new DatabaseError( "Unable to retrieve created record" );
+        }
 
         var validation = await this.ValidationService.Validate( contribution,
                                                                 cancellationToken );
@@ -39,11 +44,17 @@ public class ContributionService : IContributionService
            .MatchAsync<CreateContributionResult>( async _ =>
                {
                    var recordToUpdate = createdRecord.SetStatus( MarketDataContributionStatus.Validated );
+                   var recordId = recordToUpdate?.Id ?? string.Empty;
+                   
+                   if ( string.IsNullOrWhiteSpace( recordId ) )
+                   {
+                       return new DatabaseError( "Unrecoverable error. Contribution Id doesn't exist" );
+                   }
                    
                    // update record
                    var updateResult =
                        await this.SurrealDbClient.UpdateRecord( recordToUpdate,
-                                                                recordToUpdate.Id,
+                                                                recordId,
                                                                 cancellationToken );
 
                    if (!updateResult.IsSuccess)
@@ -54,6 +65,11 @@ public class ContributionService : IContributionService
 
                    var res =  updateResult.SerialiseResult?.First( )
                                       .Result.First( );
+                   
+                   if ( res is null )
+                   {
+                       return new DatabaseError( "Unable to retrieve updated record" );
+                   }
 
                    return res;
                },
@@ -72,8 +88,13 @@ public class ContributionService : IContributionService
         }
         
         var res = result.SerialiseResult?.First( )
-                     .Result; 
+                     .Result;
+
+        if ( res is null )
+        {
+            return new DatabaseError( "No records found" );
+        }
         
-        return res.ToList( );
+        return new MarketDataContributions( res );
     }
 }

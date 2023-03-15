@@ -3,13 +3,13 @@ using OneOf;
 namespace MarketData.ContributionGatewayApi.Domain;
 
 public class GetContributionsResult :
-    OneOfBase<List<MarketDataContribution>, DatabaseError>
+    OneOfBase<MarketDataContributions, DatabaseError>
 {
     protected GetContributionsResult(
-        OneOf<List<MarketDataContribution>, DatabaseError> input ) : base( input ) { }
+        OneOf<MarketDataContributions, DatabaseError> input ) : base( input ) { }
 
     public static implicit operator GetContributionsResult(
-        List<MarketDataContribution> success )
+        MarketDataContributions success )
         => new(success);
 
     public static implicit operator GetContributionsResult( DatabaseError fail ) => new(fail);
