@@ -52,6 +52,10 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                                                          .AddTransient
                                                                               <ISurrealDbClient>( _ => this
                                                                                                      .surrealDbClient );
+                                                                      services
+                                                                         .AddTransient<
+                                                                              IValidationService>( _ => this
+                                                                                                      .validationService );
                                                                   } );
                                    } );
     }
