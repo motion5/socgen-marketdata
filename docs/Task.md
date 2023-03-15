@@ -21,6 +21,11 @@ Business users -> Market Data contribution gateway -> Market Data Validation
    MIFID, etc.) and reply with an appropriate response code.
    We will be building the Market data contribution gateway and only simulating the Market data
    validation service component in order to allow us to fully test the contribution flow.
+ 
+**assumption: Response code here refers to a HTTP Status code and not some business defined code**
+
+**assumption: It will be sufficient to mock out the validation service component as a C# class, not as an API. Thus by taking an interface first approach, coding to the interface and mocking out the interface in tests we achieve this. This will allow a real service to implement that interface later**
+
 
 ### Requirements
    The product requirements for this initial phase are the following:

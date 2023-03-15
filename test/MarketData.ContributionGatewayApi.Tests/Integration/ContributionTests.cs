@@ -1,44 +1,68 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using FluentAssertions;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
+using LanguageExt;
+using MarketData.ContributionGatewayApi.Domain;
+using MarketData.ContributionGatewayApi.Infrastructure;
+using NSubstitute;
 using Xunit;
 
 namespace MarketData.ContributionGatewayApi.Tests.Integration;
 
-public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
+public class ContributionTests : IClassFixture<ContributionApiFactory>
 {
-    private readonly WebApplicationFactory<Program> factory;
     private const string BaseRoute = "contribution";
-
-    public ContributionTests( )
+    private readonly ContributionApiFactory fixture;
+    private readonly JsonSerializerOptions
+        jsonSerializerOptions = new( )
+                                {
+                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                    Converters =
+                                    {
+                                        new JsonStringEnumConverter( JsonNamingPolicy.CamelCase )
+                                    }
+                                };
+    public ContributionTests( ContributionApiFactory fixture )
     {
-        this.factory = new WebApplicationFactory<Program>( ).WithWebHostBuilder( builder =>
-                                                                                 {
-                                                                                     builder
-                                                                                        .UseEnvironment( "Development" );
-                                                                                 } );
+        this.fixture = fixture;
     }
 
     [Fact]
     public async Task CreateMarketDataContribution_CreatesAContribution_WhenDataIsValid( )
     {
         // Arrange
-        var client = this.factory.CreateClient( );
-        var contributionRequest = GenerateContributionRequest( );
+        var sut = this.fixture.CreateClient( );
+        var contributionRequest = GenerateContributionRequest( "FxQuote",
+                                                               "EUR/USD",
+                                                               1.2345m,
+                                                               1.2346m );
+
+        this.fixture.ValidationService.Validate( Arg.Any<MarketDataContribution>( ),
+                                                 Arg.Any<CancellationToken>( ) )
+            .Returns( Task.FromResult( Either<ValidationServiceFail, ValidationServiceSuccess>
+                                          .Right( new ValidationServiceSuccess( ) )
+                                     )
+                    );
 
         // Act
-        var response = await client.PostAsJsonAsync( BaseRoute,
-                                                     contributionRequest );
-        var createdContribution = await response.Content.ReadFromJsonAsync<ContributionResponse>( );
+        var response = await sut.PostAsJsonAsync( BaseRoute,
+                                                  contributionRequest );
 
         // Assert
+        response.EnsureSuccessStatusCode( );
+
+        var createdContribution =
+            await response.Content
+                          .ReadFromJsonAsync<MarketDataContribution>( jsonSerializerOptions );
+
         response.StatusCode.Should( )
                 .Be( HttpStatusCode.Created );
         createdContribution!.Id.Should( )
-                            .NotBe( Guid.Empty );
-        createdContribution.MarketDataType.Should( )
+                            .NotBeEmpty( );
+        createdContribution.MarketDataType.ToString( )
+                           .Should( )
                            .Be( contributionRequest.MarketDataType );
         createdContribution.MarketData.Should( )
                            .BeEquivalentTo( contributionRequest.MarketData );
@@ -48,52 +72,105 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                                      0,
                                                      0,
                                                      1 ) );
+
+        response.Headers.Location.Should( )
+                .Be( $"{BaseRoute}/{createdContribution.Id}" );
     }
 
-    private ContributionRequest GenerateContributionRequest( )
+    [Fact]
+    public async Task CreateMarketDataContribution_ReturnsBadRequest_WhenDataIsInvalid( )
     {
-        return new("FxQuote",
-                   new("EUR/USD",
-                       1.1234m,
-                       1.1236m)
-                  );
+        // Arrange
+        var sut = this.fixture.CreateClient( );
+        var contributionRequest = GenerateContributionRequest( "InvalidType",
+                                                               "EUR/USD",
+                                                               1.2345m,
+                                                               1.2346m );
+
+        // Act
+        var response = await sut.PostAsJsonAsync( BaseRoute,
+                                                  contributionRequest );
+
+        // Assert
+        response.StatusCode.Should( )
+                .Be( HttpStatusCode.BadRequest );
+
+
+        var responseBody = await response.Content.ReadFromJsonAsync<ValidationError>( );
+
+        responseBody.Errors.Should( )
+                    .Contain( "marketDataType is not a valid market data type" );
+    }
+    
+    [Fact]
+    public async Task GetMarketDataContributions_ReturnsContributions_WhenContributionsExist( )
+    {
+        // Arrange
+        var sut = this.fixture.CreateClient( );
+        this.fixture.ValidationService.Validate( Arg.Any<MarketDataContribution>( ),
+                                                 Arg.Any<CancellationToken>( ) )
+            .Returns( Task.FromResult( Either<ValidationServiceFail, ValidationServiceSuccess>
+                                          .Right( new ValidationServiceSuccess( ) )
+                                     )
+                    );
+
+        var createContributionResponse = await sut.PostAsJsonAsync( BaseRoute,
+                                                       GenerateContributionRequest( "FxQuote",
+                                                                                    "EUR/USD",
+                                                                                    1.2345m,
+                                                                                    1.2346m ) );
+        createContributionResponse.EnsureSuccessStatusCode( );
+        
+        var createdRecord =
+            await createContributionResponse.Content
+                                            .ReadFromJsonAsync<MarketDataContribution>( jsonSerializerOptions );
+        
+        // Act
+        var response = await sut.GetAsync( BaseRoute, CancellationToken.None );
+
+        // Assert
+        response.EnsureSuccessStatusCode( );
+
+        var createdContributions =
+            await response.Content
+                          .ReadFromJsonAsync<IEnumerable<MarketDataContribution>>( jsonSerializerOptions );
+
+        response.StatusCode.Should( )
+                .Be( HttpStatusCode.OK );
+        
+        // added to be greater than or equal because other test could add 
+        // record and I don't have an endpoint to remove it
+        // In real solution that would exist or you could implement teardown
+        createdContributions.Should( )
+                            .HaveCountGreaterThanOrEqualTo( 1 );
+        
+        // the first record should be the one we just created
+        createdContributions.First( )
+                            .Id.Should( )
+                            .NotBeEmpty( );
+        
+        createdContributions.First( )
+                            .MarketDataType.ToString( )
+                            .Should( )
+                            .Be( createdRecord.MarketDataType.ToString( ) );
+        
+        createdContributions.First( )
+                            .MarketData.Should( )
+                            .BeEquivalentTo( createdRecord.MarketData );
     }
 
-    /**
-     * POST /api/contribution
-{
-    "marketDataType": "FxQuote",
-    "marketData": {
-        "currencyPair": "EUR/USD",
-        "bid": 1.1234,
-        "ask": 1.1236
+    public ContributionRequest GenerateContributionRequest( string marketDataType,
+                                                            string currencyPair,
+                                                            decimal bid,
+                                                            decimal ask )
+    {
+        return new ContributionRequest( marketDataType,
+                                        new MarketDataValue( currencyPair,
+                                                             bid,
+                                                             ask )
+                                      );
     }
-}
-     */
+
     public record ContributionRequest( string MarketDataType,
-                                       MarketData MarketData );
-
-    public record MarketData( string CurrencyPair,
-                              decimal Bid,
-                              decimal Ask );
-
-    /**
-     * Returns 
-{
-    "id": "123",
-    "marketDataType": "FxQuote",
-    "marketData": {
-        "currencyPair": "EUR/USD",
-        "bid": 1.1234,
-        "ask": 1.1236
-    },
-    "status": "Validated"
-    "createdDate": "2020-01-01T00:00:00Z"
-}
-     */
-    public record ContributionResponse( Guid Id,
-                                        string MarketDataType,
-                                        MarketData MarketData,
-                                        string Status,
-                                        DateTime CreatedDate );
+                                       MarketDataValue MarketData );
 }
