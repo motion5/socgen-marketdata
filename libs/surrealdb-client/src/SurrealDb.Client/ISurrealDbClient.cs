@@ -13,6 +13,11 @@ public interface ISurrealDbClient
         T record,
         CancellationToken? cancellationToken = null );
 
+    Task<ApiResponse<T>> UpdateRecord<T>(
+        T record,
+        string id,
+        CancellationToken? cancellationToken = null );
+
     Task<ApiResponse<T>> DeleteAll<T>(
         CancellationToken? cancellationToken = null );
 

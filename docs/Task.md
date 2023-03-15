@@ -21,6 +21,9 @@ Business users -> Market Data contribution gateway -> Market Data Validation
    MIFID, etc.) and reply with an appropriate response code.
    We will be building the Market data contribution gateway and only simulating the Market data
    validation service component in order to allow us to fully test the contribution flow.
+ 
+**assumption: Response code here refers to a HTTP Status code and not some business defined code**
+
 
 ### Requirements
    The product requirements for this initial phase are the following:

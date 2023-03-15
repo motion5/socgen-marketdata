@@ -3,9 +3,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
+using LanguageExt;
+using MarketData.ContributionGatewayApi.Application;
 using MarketData.ContributionGatewayApi.Domain;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SurrealDb.Client;
@@ -19,6 +22,7 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
     private readonly WebApplicationFactory<Program> factory;
     private const string BaseRoute = "contribution";
     private readonly ISurrealDbClient surrealDbClient = Substitute.For<ISurrealDbClient>( );
+    private readonly IValidationService validationService = Substitute.For<IValidationService>( );
 
     private readonly JsonSerializerOptions
         jsonSerializerOptions = new( )
@@ -40,15 +44,15 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                        builder
                                           .UseEnvironment( "Development" );
                                        builder
-                                          .ConfigureServices( services
-                                                                  =>
-                                                              {
-                                                                  services.AddJsonConverters( );
-                                                                  services
-                                                                     .AddTransient
-                                                                          <ISurrealDbClient>( _ => this
-                                                                                                 .surrealDbClient );
-                                                              } );
+                                          .ConfigureTestServices( services
+                                                                      =>
+                                                                  {
+                                                                      services.AddJsonConverters( );
+                                                                      services
+                                                                         .AddTransient
+                                                                              <ISurrealDbClient>( _ => this
+                                                                                                     .surrealDbClient );
+                                                                  } );
                                    } );
     }
 
@@ -68,6 +72,22 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                                                                      1.2345m,
                                                                                      1.2346m
                                                                                    )
+                                     )
+                    );
+        this.surrealDbClient.UpdateRecord( Arg.Any<MarketDataContribution>( ),
+                                           Arg.Any<string>( ),
+                                           Arg.Any<CancellationToken>( ) )
+            .Returns( Task.FromResult( GenerateCreateMarketDataContributionResponse( "FxQuote",
+                                                                                     "EUR/USD",
+                                                                                     1.2345m,
+                                                                                     1.2346m
+                                                                                   )
+                                     )
+                    );
+        this.validationService.Validate( Arg.Any<MarketDataContribution>( ),
+                                         Arg.Any<CancellationToken>( ) )
+            .Returns( Task.FromResult( Either<ValidationServiceFail, ValidationServiceSuccess>
+                                          .Right( new ValidationServiceSuccess( ) )
                                      )
                     );
 
@@ -123,13 +143,12 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         response.StatusCode.Should( )
                 .Be( HttpStatusCode.BadRequest );
-        
-        
-        
+
+
         var responseBody = await response.Content.ReadFromJsonAsync<ValidationError>( );
-        
+
         responseBody.Errors.Should( )
-                    .Contain( "marketDataType is not a valid market data type" ); 
+                    .Contain( "marketDataType is not a valid market data type" );
     }
 
     public ContributionRequest GenerateContributionRequest( string marketDataType,

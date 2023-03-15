@@ -19,8 +19,14 @@ public class MarketDataContribution
     public string? Id { get; set; }
     public MarketDataType MarketDataType { get; }
     public Infrastructure.MarketDataValue MarketData { get; }
-    public MarketDataContributionStatus Status { get; }
+    public MarketDataContributionStatus Status { get; set; }
     public DateTime CreatedDate { get; }
+    
+    public MarketDataContribution SetStatus( MarketDataContributionStatus status )
+    {
+        this.Status = status;
+        return this;
+    }
 
     public static Either<ValidationError, MarketDataContribution> Create(
         string marketDataType,

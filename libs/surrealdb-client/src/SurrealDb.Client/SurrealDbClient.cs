@@ -78,6 +78,25 @@ public class SurrealDbClient : ISurrealDbClient
             $"No data returned from creating record in :: {table}",
             cancellationToken);
     }
+    
+    public async Task<ApiResponse<T>> UpdateRecord<T>(T record, string id,
+                                                      CancellationToken? cancellationToken = null)
+    {
+        var table = typeof(T).Name;
+        var requestMessage = new HttpRequestMessage(HttpMethod.Put, CreateUri($"key/{table}/{id.Split(":")[1]}"));
+
+        var jsoncontent = JsonSerializer.Serialize( record,
+                                                    serializerOptions );
+        var stringContent = new StringContent(jsoncontent, Encoding.UTF8,
+                                              "application/json");
+
+        requestMessage.Content = stringContent;
+
+        return await TryRequest<T>(requestMessage,
+                                   $"No data returned from creating record in :: {table}",
+                                   cancellationToken);
+    }
+
 
     public async Task<ApiResponse<T>> DeleteAll<T>(
         CancellationToken? cancellationToken = null)
