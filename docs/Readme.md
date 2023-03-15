@@ -19,6 +19,11 @@ Markdown files to document the validation service
 - .NET Core 7.0 SDK
 - Running Surreal Db instance, configured within the appsettings.Development.json - A docker container for this can be started using the Powershell script located at `/libs/surrealdb-client/run-surrealdb.ps1`
 
+### Calling the API
+You can use the Swagger UI to call the API, or use Postman.
+You can find the Swagger UI at `http://localhost:7133/swagger/index.html`
+Details of the API request body can be found in the docs at [Contribution Service](./ContributionService.md)
+
 ### Running the tests
 I have included both unit tests and integration tests.
 
