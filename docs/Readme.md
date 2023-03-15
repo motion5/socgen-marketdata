@@ -52,6 +52,13 @@ I then added in a mock for the Validation Service, and wrote a test to ensure th
 Mocking at the boundaries of the system is a good way to ensure that the system is decoupled and can be tested in isolation.
 This is why I've used integration tests and TestContainers 
 
+### 3. Database
+I opted to use a real database that I can spin up in a docker container, rather than an in memory database.
+
+I have been working on a client for SurrealDB recently as a personal endeavour, so I decided to use that for this task as it is quick, lightweight and provides a nice SQL like interface.
+
+The client for this can be found in the `/libs/surrealdb-client` folder.
+
 ## Code style, patterns, and practices
 I have chosen to showcase my skills in the following areas:
 - TDD & BDD
