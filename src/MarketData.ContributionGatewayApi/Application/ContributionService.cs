@@ -24,7 +24,7 @@ public class ContributionService : IContributionService
         var result = await this.SurrealDbClient.CreateRecord( contribution,
                                                               cancellationToken );
 
-        if ( !string.IsNullOrWhiteSpace( result.Error ) )
+        if (!result.IsSuccess)
         {
             return new
                 DatabaseError( "Database returned error status code" );
@@ -61,7 +61,7 @@ public class ContributionService : IContributionService
                },
                validationFail =>
                {
-                   return new ValidationError( new List<string>( ) { validationFail.Message } );
+                   return new ValidationError( new List<string> { validationFail.Message } );
 
                } );
 

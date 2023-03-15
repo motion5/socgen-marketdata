@@ -4,26 +4,17 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentAssertions;
 using LanguageExt;
-using MarketData.ContributionGatewayApi.Application;
 using MarketData.ContributionGatewayApi.Domain;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
+using MarketData.ContributionGatewayApi.Infrastructure;
 using NSubstitute;
-using SurrealDb.Client;
-using SurrealDb.Client.SurrealResponses;
 using Xunit;
 
 namespace MarketData.ContributionGatewayApi.Tests.Integration;
 
-public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
+public class ContributionTests : IClassFixture<ContributionApiFactory>
 {
-    private readonly WebApplicationFactory<Program> factory;
     private const string BaseRoute = "contribution";
-    private readonly ISurrealDbClient surrealDbClient = Substitute.For<ISurrealDbClient>( );
-    private readonly IValidationService validationService = Substitute.For<IValidationService>( );
-
+    private readonly ContributionApiFactory fixture;
     private readonly JsonSerializerOptions
         jsonSerializerOptions = new( )
                                 {
@@ -33,63 +24,23 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                         new JsonStringEnumConverter( JsonNamingPolicy.CamelCase )
                                     }
                                 };
-
-    public ContributionTests( )
+    public ContributionTests( ContributionApiFactory fixture )
     {
-        this.factory =
-            new WebApplicationFactory<Program>( )
-               .WithWebHostBuilder(
-                                   builder =>
-                                   {
-                                       builder
-                                          .UseEnvironment( "Development" );
-                                       builder
-                                          .ConfigureTestServices( services
-                                                                      =>
-                                                                  {
-                                                                      services.AddJsonConverters( );
-                                                                      services
-                                                                         .AddTransient
-                                                                              <ISurrealDbClient>( _ => this
-                                                                                                     .surrealDbClient );
-                                                                      services
-                                                                         .AddTransient<
-                                                                              IValidationService>( _ => this
-                                                                                                      .validationService );
-                                                                  } );
-                                   } );
+        this.fixture = fixture;
     }
 
     [Fact]
     public async Task CreateMarketDataContribution_CreatesAContribution_WhenDataIsValid( )
     {
         // Arrange
-        var sut = this.factory.CreateClient( );
+        var sut = this.fixture.CreateClient( );
         var contributionRequest = GenerateContributionRequest( "FxQuote",
                                                                "EUR/USD",
                                                                1.2345m,
                                                                1.2346m );
-        this.surrealDbClient.CreateRecord( Arg.Any<MarketDataContribution>( ),
-                                           Arg.Any<CancellationToken>( ) )
-            .Returns( Task.FromResult( GenerateCreateMarketDataContributionResponse( "FxQuote",
-                                                                                     "EUR/USD",
-                                                                                     1.2345m,
-                                                                                     1.2346m
-                                                                                   )
-                                     )
-                    );
-        this.surrealDbClient.UpdateRecord( Arg.Any<MarketDataContribution>( ),
-                                           Arg.Any<string>( ),
-                                           Arg.Any<CancellationToken>( ) )
-            .Returns( Task.FromResult( GenerateCreateMarketDataContributionResponse( "FxQuote",
-                                                                                     "EUR/USD",
-                                                                                     1.2345m,
-                                                                                     1.2346m
-                                                                                   )
-                                     )
-                    );
-        this.validationService.Validate( Arg.Any<MarketDataContribution>( ),
-                                         Arg.Any<CancellationToken>( ) )
+
+        this.fixture.ValidationService.Validate( Arg.Any<MarketDataContribution>( ),
+                                                 Arg.Any<CancellationToken>( ) )
             .Returns( Task.FromResult( Either<ValidationServiceFail, ValidationServiceSuccess>
                                           .Right( new ValidationServiceSuccess( ) )
                                      )
@@ -130,15 +81,11 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task CreateMarketDataContribution_ReturnsBadRequest_WhenDataIsInvalid( )
     {
         // Arrange
-        var sut = this.factory.CreateClient( );
+        var sut = this.fixture.CreateClient( );
         var contributionRequest = GenerateContributionRequest( "InvalidType",
                                                                "EUR/USD",
                                                                1.2345m,
                                                                1.2346m );
-
-        this.surrealDbClient.CreateRecord( Arg.Any<MarketDataContribution>( ),
-                                           Arg.Any<CancellationToken>( ) )
-            .Returns( Task.FromResult( new ApiResponse<MarketDataContribution>( ) ) );
 
         // Act
         var response = await sut.PostAsJsonAsync( BaseRoute,
@@ -161,54 +108,12 @@ public class ContributionTests : IClassFixture<WebApplicationFactory<Program>>
                                                             decimal ask )
     {
         return new ContributionRequest( marketDataType,
-                                        new Infrastructure.MarketDataValue( currencyPair,
-                                                                            bid,
-                                                                            ask )
+                                        new MarketDataValue( currencyPair,
+                                                             bid,
+                                                             ask )
                                       );
     }
 
     public record ContributionRequest( string MarketDataType,
-                                       Infrastructure.MarketDataValue MarketData );
-
-
-    public static ApiResponse<MarketDataContribution> GenerateCreateMarketDataContributionResponse(
-        string marketDataType,
-        string currencyPair,
-        decimal bid,
-        decimal ask )
-    {
-        var result =
-            MarketDataContribution.Create( marketDataType,
-                                           new Infrastructure.MarketDataValue( currencyPair,
-                                                                               bid,
-                                                                               ask )
-                                         );
-
-        var marketDataContribution = result.Match( val => val,
-                                                   err => throw new Exception( err.Errors
-                                                                                  .First( ) ) );
-
-        marketDataContribution.Id = Guid.NewGuid( )
-                                        .ToString( );
-
-        return GenerateSurrealCreatedApiResponse( marketDataContribution );
-    }
-
-    public static ApiResponse<T> GenerateSurrealCreatedApiResponse<T>( T createdRecord )
-    {
-        var listOfMarketDataContributions =
-            new List<T> { createdRecord };
-        var queryResponses = new List<QueryResponse<T>>
-                             {
-                                 new(listOfMarketDataContributions,
-                                     "",
-                                     StatusResult.OK)
-                             };
-
-        var record =
-            new ApiResponse<T>( HttpStatusCode.Created )
-               .SetQueryResponse( queryResponses );
-
-        return record;
-    }
+                                       MarketDataValue MarketData );
 }
