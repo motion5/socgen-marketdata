@@ -15,12 +15,11 @@ public class ContributionService : IContributionService
         this.ValidationService = validationService;
     }
 
-    public async Task<ContributionServiceResult>
+    public async Task<CreateContributionResult>
         CreateContribution(
             MarketDataContribution contribution,
             CancellationToken cancellationToken )
     {
-        // create
         var result = await this.SurrealDbClient.CreateRecord( contribution,
                                                               cancellationToken );
 
@@ -33,12 +32,11 @@ public class ContributionService : IContributionService
         var createdRecord = result.SerialiseResult?.First( )
                                   .Result.First( );
 
-        // validate against validation service
         var validation = await this.ValidationService.Validate( contribution,
                                                                 cancellationToken );
 
         return await validation
-           .MatchAsync<ContributionServiceResult>( async success =>
+           .MatchAsync<CreateContributionResult>( async _ =>
                {
                    var recordToUpdate = createdRecord.SetStatus( MarketDataContributionStatus.Validated );
                    
@@ -54,16 +52,28 @@ public class ContributionService : IContributionService
                            DatabaseError( "Database returned error status code" );
                    }
 
-                   var res=  updateResult.SerialiseResult?.First( )
+                   var res =  updateResult.SerialiseResult?.First( )
                                       .Result.First( );
 
                    return res;
                },
-               validationFail =>
-               {
-                   return new ValidationError( new List<string> { validationFail.Message } );
+               validationFail => new ValidationError( new List<string> { validationFail.Message } ) );
 
-               } );
+    }
 
+    public async Task<GetContributionsResult> GetContributions( CancellationToken cancellationToken )
+    {
+        var result = await this.SurrealDbClient.SelectAll<MarketDataContribution>( cancellationToken );
+        
+        if (!result.IsSuccess)
+        {
+            return new
+                DatabaseError( "Database returned error status code" );
+        }
+        
+        var res = result.SerialiseResult?.First( )
+                     .Result; 
+        
+        return res.ToList( );
     }
 }

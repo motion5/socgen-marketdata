@@ -15,6 +15,15 @@ builder.Services.AddTransient<IValidationService, MockValidationService>( );
 
 var app = builder.Build( );
 
+app.MapGet( "/contribution",
+            async ( IContributionService service,
+              CancellationToken cancellationToken ) =>
+            {
+                var res = await service.GetContributions( cancellationToken );
+                return res.Match( Results.Ok,
+                           dbError => Results.Problem( "Unable to connect to Db" ) );
+            } );
+
 app.MapPost( "/contribution",
              async ( ContributionRequest request,
                      IContributionService service,

@@ -4,7 +4,10 @@ namespace MarketData.ContributionGatewayApi.Application;
 
 public interface IContributionService
 {
-    Task<ContributionServiceResult> CreateContribution(
+    Task<CreateContributionResult> CreateContribution(
         MarketDataContribution contribution,
+        CancellationToken cancellationToken );
+        
+    Task<GetContributionsResult> GetContributions(
         CancellationToken cancellationToken );
 }
