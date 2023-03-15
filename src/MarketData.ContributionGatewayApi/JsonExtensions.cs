@@ -10,7 +10,6 @@ public static class JsonExtensions
     {
         options.Converters.Add( new StatusResultConverter( ) );
         options.Converters.Add( new JsonStringEnumConverter( ) );
-        // options.Converters.Add( new MarketDataContributionConverter() );
     }
 
     public static IServiceCollection AddJsonConverters( this IServiceCollection services )
