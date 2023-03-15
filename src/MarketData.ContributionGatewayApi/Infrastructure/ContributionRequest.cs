@@ -3,16 +3,17 @@ using MarketData.ContributionGatewayApi.Domain;
 
 namespace MarketData.ContributionGatewayApi.Infrastructure;
 
-public record ContributionRequest( string MarketDataType,
-                                   MarketDataValue MarketData )
+public record ContributionRequest(string MarketDataType,
+    MarketDataValue MarketData)
 {
     public string? Id { get; set; }
 
-    public Either<ValidationError, MarketDataContribution> ToMarketDataContribution( )
-        => MarketDataContribution.Create( MarketDataType,
-                                          MarketData );
+    public Either<ApplicationError, MarketDataContribution> ToMarketDataContribution()
+        => MarketDataContribution.Create(MarketDataType,
+                MarketData)
+            .MapLeft(r => (ApplicationError)r);
 };
 
-public record MarketDataValue( string CurrencyPair,
-                               decimal Bid,
-                               decimal Ask );
+public record MarketDataValue(string CurrencyPair,
+    decimal Bid,
+    decimal Ask);

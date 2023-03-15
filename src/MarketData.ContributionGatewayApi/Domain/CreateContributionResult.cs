@@ -2,19 +2,19 @@ using OneOf;
 
 namespace MarketData.ContributionGatewayApi.Domain;
 
-public class CreateContributionResult :
-    OneOfBase<MarketDataContribution, ValidationError, DatabaseError>
+public class ApplicationError :
+    OneOfBase<ValidationError, DatabaseError, ValidationServiceFail>
 {
-    protected CreateContributionResult(
-        OneOf<MarketDataContribution, ValidationError, DatabaseError> input ) :
+    protected ApplicationError(
+       OneOf<ValidationError, DatabaseError, ValidationServiceFail> input ) :
         base( input ) { }
 
-    public static implicit operator CreateContributionResult( MarketDataContribution success )
-        => new(success);
-
-    public static implicit operator CreateContributionResult( ValidationError fail )
+    public static implicit operator ApplicationError( ValidationError fail )
         => new(fail);
 
-    public static implicit operator CreateContributionResult( DatabaseError fail )
+    public static implicit operator ApplicationError( DatabaseError fail )
+        => new(fail);
+    
+    public static implicit operator ApplicationError( ValidationServiceFail fail ) 
         => new(fail);
 }

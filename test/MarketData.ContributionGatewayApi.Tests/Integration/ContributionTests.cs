@@ -41,7 +41,7 @@ public class ContributionTests : IClassFixture<ContributionApiFactory>
 
         this.fixture.ValidationService.Validate( Arg.Any<MarketDataContribution>( ),
                                                  Arg.Any<CancellationToken>( ) )
-            .Returns( Task.FromResult( Either<ValidationServiceFail, ValidationServiceSuccess>
+            .Returns( Task.FromResult( Either<ApplicationError, ValidationServiceSuccess>
                                           .Right( new ValidationServiceSuccess( ) )
                                      )
                     );
@@ -109,7 +109,7 @@ public class ContributionTests : IClassFixture<ContributionApiFactory>
         var sut = this.fixture.CreateClient( );
         this.fixture.ValidationService.Validate( Arg.Any<MarketDataContribution>( ),
                                                  Arg.Any<CancellationToken>( ) )
-            .Returns( Task.FromResult( Either<ValidationServiceFail, ValidationServiceSuccess>
+            .Returns( Task.FromResult( Either<ApplicationError, ValidationServiceSuccess>
                                           .Right( new ValidationServiceSuccess( ) )
                                      )
                     );
